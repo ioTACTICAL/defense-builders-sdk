@@ -139,8 +139,9 @@ workflow_discover_versions() {
         fi
     fi
     
-    # Output for GitHub Actions
-    gh_output "versions" "$final_versions"
+    # Output for GitHub Actions (compact JSON format)
+    local compact_versions=$(echo "$final_versions" | jq -c .)
+    gh_output "versions" "$compact_versions"
     gh_output "sdk_type" "$sdk_type"
     gh_output "discovery_method" "$(test "$discovered_versions" != "$fallback_versions" && echo "github-api" || echo "fallback")"
     
