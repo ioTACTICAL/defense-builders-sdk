@@ -5,12 +5,14 @@ on:
     branches: [ main ]
     paths: 
       - 'sdks/atak-civ/**'
+      - 'sdk-configs/atak-civ.conf'
       - 'base/**'
       - 'scripts/**'
   pull_request:
     branches: [ main ]
     paths: 
       - 'sdks/atak-civ/**'
+      - 'sdk-configs/atak-civ.conf'
       - 'base/**'
       - 'scripts/**'
   workflow_dispatch:
