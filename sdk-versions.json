@@ -1,0 +1,55 @@
+{
+  "atak-civ": {
+    "name": "ATAK CIV SDK",
+    "description": "Android Team Awareness Kit Civilian SDK",
+    "versions": [
+      {
+        "version": "5.5.0.5",
+        "label": "5.5.0.5 (Latest)",
+        "container": "ghcr.io/iotactical/dbsdk-atak-civ:5.5.0.5",
+        "java_version": "11",
+        "gradle_version": "7.6",
+        "android_api": "30",
+        "is_latest": true,
+        "release_notes": "Latest stable release with enhanced features and bug fixes"
+      },
+      {
+        "version": "5.4.0.21",
+        "label": "5.4.0.21",
+        "container": "ghcr.io/iotactical/dbsdk-atak-civ:5.4.0.21",
+        "java_version": "11",
+        "gradle_version": "7.6",
+        "android_api": "30",
+        "is_latest": false,
+        "release_notes": "Stable release with improved performance and compatibility"
+      },
+      {
+        "version": "5.3.0.12",
+        "label": "5.3.0.12",
+        "container": "ghcr.io/iotactical/dbsdk-atak-civ:5.3.0.12",
+        "java_version": "11",
+        "gradle_version": "7.6",
+        "android_api": "30",
+        "is_latest": false,
+        "release_notes": "Legacy stable release for compatibility testing"
+      }
+    ],
+    "templates": [
+      {
+        "id": "basic",
+        "name": "Basic Plugin",
+        "description": "Simple ATAK plugin with basic functionality and core SDK integration"
+      },
+      {
+        "id": "advanced",
+        "name": "Advanced Plugin", 
+        "description": "Complex plugin with UI components, data integration, and advanced ATAK features"
+      },
+      {
+        "id": "custom",
+        "name": "Custom Template",
+        "description": "Minimal setup for experienced developers who prefer to build from scratch"
+      }
+    ]
+  }
+}
