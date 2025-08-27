@@ -18,6 +18,13 @@ fi
 
 source "$DISCOVERY_LIB"
 
+# Framework logging functions for compatibility
+framework_log_debug() { echo "DEBUG: $1"; }
+framework_log_info() { echo "INFO: $1"; }  
+framework_log_warn() { echo "WARN: $1"; }
+framework_log_error() { echo "ERROR: $1"; }
+framework_log_success() { echo "SUCCESS: $1"; }
+
 # GitHub Actions output helpers
 gh_output() {
     local name="$1"
@@ -63,9 +70,26 @@ workflow_discover_versions() {
     gh_summary "**Organization**: $GITHUB_ORG"
     gh_summary ""
     
-    # Discover versions
-    local discovered_versions
-    discovered_versions=$(discover_sdk_versions "$sdk_type" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
+    # Load SDK configuration to use custom discovery function if available
+    local config_file="$REPO_ROOT/sdk-configs/${sdk_type}.conf"
+    if [[ -f "$config_file" ]]; then
+        echo "Loading SDK configuration: $config_file"
+        source "$config_file"
+        
+        # Use custom discovery function if defined
+        local discovery_func="${SDK_VERSION_DISCOVERY:-discover_${sdk_type//-/_}_versions}"
+        if declare -F "$discovery_func" >/dev/null 2>&1; then
+            echo "Using custom discovery function: $discovery_func"
+            discovered_versions=$($discovery_func 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
+        else
+            echo "Custom discovery function $discovery_func not found, using generic discovery"
+            discovered_versions=$(discover_sdk_versions "$sdk_type" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
+        fi
+    else
+        echo "No configuration file found, using generic discovery"
+        # Discover versions using generic function
+        discovered_versions=$(discover_sdk_versions "$sdk_type" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
+    fi
     
     # Check if discovery was successful
     if [[ "$discovered_versions" == "[]" || "$discovered_versions" == "null" ]]; then
