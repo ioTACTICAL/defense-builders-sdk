@@ -18,12 +18,12 @@ fi
 
 source "$DISCOVERY_LIB"
 
-# Framework logging functions for compatibility
-framework_log_debug() { echo "DEBUG: $1"; }
-framework_log_info() { echo "INFO: $1"; }  
-framework_log_warn() { echo "WARN: $1"; }
-framework_log_error() { echo "ERROR: $1"; }
-framework_log_success() { echo "SUCCESS: $1"; }
+# Framework logging functions for compatibility (output to stderr to avoid capture)
+framework_log_debug() { echo "DEBUG: $1" >&2; }
+framework_log_info() { echo "INFO: $1" >&2; }  
+framework_log_warn() { echo "WARN: $1" >&2; }
+framework_log_error() { echo "ERROR: $1" >&2; }
+framework_log_success() { echo "SUCCESS: $1" >&2; }
 
 # GitHub Actions output helpers
 gh_output() {
@@ -80,7 +80,7 @@ workflow_discover_versions() {
         local discovery_func="${SDK_VERSION_DISCOVERY:-discover_${sdk_type//-/_}_versions}"
         if declare -F "$discovery_func" >/dev/null 2>&1; then
             echo "Using custom discovery function: $discovery_func"
-            discovered_versions=$($discovery_func 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
+            discovered_versions=$($discovery_func | jq -R . | jq -s . 2>/dev/null || echo '[]')
         else
             echo "Custom discovery function $discovery_func not found, using generic discovery"
             discovered_versions=$(discover_sdk_versions "$sdk_type" 2>/dev/null | jq -R . | jq -s . 2>/dev/null || echo '[]')
