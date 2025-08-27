@@ -77,27 +77,67 @@ docker run -it --rm dbsdk-atak-civ:local
 - **Security review**: What are the security implications?
 - **Community input**: Discuss in GitHub Discussions first
 
-### 2. Create SDK Structure
-```bash
-# Create SDK directory
-mkdir -p sdks/your-sdk-name
+### 2. Create SDK Configuration
 
-# Required files:
-sdks/your-sdk-name/
-├── Dockerfile              # Extends ghcr.io/iotactical/dbsdk-base
-├── devcontainer.json       # VS Code devcontainer config
-└── scripts/
-    ├── setup-sdk.sh       # SDK-specific setup
-    ├── post-create.sh     # Post-container creation
-    └── healthcheck-sdk.sh # Health verification
+**New Approach**: Create a configuration file in `sdk-configs/your-sdk.conf`:
+
+```bash
+# Required configuration functions
+cat > sdk-configs/your-sdk.conf << 'EOF'
+#!/bin/bash
+# SDK Configuration for Your SDK
+
+# Basic Information
+SDK_NAME="your-sdk"
+SDK_JAVA_VERSION="11"
+SDK_GRADLE_VERSION="7.6"
+
+# Version Discovery Function - REQUIRED
+discover_your_sdk_versions() {
+    # Implement version discovery logic
+    echo "1.0.0"
+    echo "1.1.0" 
+}
+
+# Dockerfile Generation Function - REQUIRED  
+generate_your_sdk_dockerfile() {
+    local version="$1"
+    local dockerfile_path="$2"
+    
+    cat > "$dockerfile_path" << DOCKERFILE
+FROM ghcr.io/iotactical/dbsdk-base:latest
+ENV SDK_VERSION=${version}
+# Your SDK setup here...
+DOCKERFILE
+}
+
+# Build Context Preparation Function - REQUIRED
+prepare_your_sdk_build_context() {
+    local version="$1"
+    local build_context="$2"
+    
+    # Prepare build context (download files, etc.)
+    framework_log_info "Preparing Your SDK v$version"
+    return 0
+}
+EOF
 ```
 
-### 3. SDK Requirements
-- **Base Image**: Must extend `ghcr.io/iotactical/dbsdk-base`
-- **Security**: Follow container hardening practices
-- **Telemetry**: Integrate DBSDK telemetry (privacy-first)
-- **Health Checks**: Implement comprehensive health verification
+### 3. Update CI Workflow
+
+Add your SDK to `.github/workflows/build-versioned-sdks.yml`:
+```yaml
+paths: 
+  - 'sdk-configs/your-sdk.conf'
+  # ... other SDK configs
+```
+
+### 4. SDK Requirements
+- **Configuration File**: Must include all three required functions
+- **Version Discovery**: Automatic detection of available SDK versions
+- **Security**: Follow container hardening practices  
 - **Documentation**: Clear setup and usage instructions
+- **Testing**: Local build verification before PR submission
 
 ## Pull Request Process
 

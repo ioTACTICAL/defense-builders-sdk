@@ -283,33 +283,86 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Update README with version matrix
+    - name: Update version documentation
       run: |
         versions='${{ needs.discover-versions.outputs.versions }}'
         echo "Available ATAK-CIV SDK versions: $versions"
+        current_date=$(date -u +"%Y-%m-%d")
         
-        # Generate version table for README
-        cat > VERSION_MATRIX.md << EOF
-        # DBSDK Version Matrix
+        # Update the technical matrix table in VERSION_MATRIX.md
+        echo "Updating VERSION_MATRIX.md with latest build information..."
         
-        | SDK Version | Container Image | Status |
-        |--------------|-----------------|--------|
+        # Create temporary version table
+        cat > temp_version_table.md << EOF
+        | SDK Version | Container Image | Size | Last Updated | Status | Features |
+        |-------------|-----------------|------|--------------|---------|----------|
         EOF
         
         echo "$versions" | jq -r '.[]' | while read version; do
-          echo "| v${version} | \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\` | ✅ Active |" >> VERSION_MATRIX.md
+          case "$version" in
+            "5.5.0.5")
+              echo "| **v${version}** | \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\` | ~2.1GB | ${current_date} | ✅ Active | Enhanced DSM manager, improved documentation |" >> temp_version_table.md
+              ;;
+            "5.4.0.21") 
+              echo "| **v${version}** | \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\` | ~2.1GB | ${current_date} | ✅ Active | Action bar APIs, Typst user manual support |" >> temp_version_table.md
+              ;;
+            "5.3.0.12")
+              echo "| **v${version}** | \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\` | ~2.1GB | ${current_date} | ✅ Active | Foundation release, core ATAK features |" >> temp_version_table.md
+              ;;
+            *)
+              echo "| **v${version}** | \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\` | ~2.1GB | ${current_date} | ✅ Active | ATAK development environment |" >> temp_version_table.md
+              ;;
+          esac
         done
         
-        echo "Generated version matrix"
-        cat VERSION_MATRIX.md
+        # Update VERSION_MATRIX.md with new table
+        if [ -f VERSION_MATRIX.md ]; then
+          # Replace the table section while preserving the rest
+          sed -i '/^| SDK Version/,/^$/c\
+cat temp_version_table.md' VERSION_MATRIX.md
+          cat temp_version_table.md >> VERSION_MATRIX.md.tmp
+          # Replace the line that has "cat temp_version_table.md"
+          sed '/cat temp_version_table.md/r temp_version_table.md' VERSION_MATRIX.md | sed '/cat temp_version_table.md/d' > VERSION_MATRIX.md.tmp
+          mv VERSION_MATRIX.md.tmp VERSION_MATRIX.md
+        fi
+        
+        # Also create simple build status file
+        cat > BUILD_STATUS.md << EOF
+        # Latest Build Status
+        
+        **Build Date**: ${current_date}  
+        **Build ID**: ${{ github.run_id }}  
+        **Commit**: ${{ github.sha }}
+        
+        ## Successfully Built Containers
+        
+        EOF
+        
+        echo "$versions" | jq -r '.[]' | while read version; do
+          echo "- \`ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}\`" >> BUILD_STATUS.md
+        done
+        
+        echo "" >> BUILD_STATUS.md
+        echo "View all containers: [GitHub Container Registry](https://github.com/orgs/${{ github.repository_owner }}/packages)" >> BUILD_STATUS.md
+        
+        echo "Generated build status documentation"
+        rm -f temp_version_table.md
     
     - name: Commit documentation updates
       run: |
-        if git diff --quiet; then
+        git add VERSION_MATRIX.md BUILD_STATUS.md
+        if git diff --cached --quiet; then
           echo "No documentation changes to commit"
         else
-          git add VERSION_MATRIX.md
-          git commit -m "Update version matrix after successful build - Versions: ${{ needs.discover-versions.outputs.versions }} - 🤖 Auto-updated by DBSDK pipeline"
+          git config --local user.email "action@github.com"
+          git config --local user.name "DBSDK Pipeline"
+          git commit -m "📊 Update build documentation
+
+Build ID: ${{ github.run_id }}
+Versions: ${{ needs.discover-versions.outputs.versions }}
+Updated: $(date -u +%Y-%m-%d)
+
+🤖 Auto-updated by DBSDK CI Pipeline"
           git push
         fi
 
