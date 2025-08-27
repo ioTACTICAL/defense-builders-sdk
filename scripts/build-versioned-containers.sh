@@ -24,6 +24,13 @@ log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
 
+# Framework logging functions for compatibility with SDK config functions
+framework_log_debug() { log_info "DEBUG: $1"; }
+framework_log_info() { log_info "$1"; }  
+framework_log_warn() { log_warn "$1"; }
+framework_log_error() { log_error "$1"; }
+framework_log_success() { log_success "$1"; }
+
 # Discover available SDK versions
 discover_versions() {
     local versions=()
@@ -43,6 +50,21 @@ discover_versions() {
 generate_dockerfile() {
     local version="$1"
     local dockerfile_path="$2"
+    
+    # Load ATAK-CIV configuration to use proper settings
+    local config_file="$REPO_ROOT/sdk-configs/atak-civ.conf"
+    if [[ -f "$config_file" ]]; then
+        source "$config_file"
+        
+        # Use the custom Dockerfile generation function if available
+        if declare -F "generate_atak_civ_dockerfile" >/dev/null 2>&1; then
+            log_info "Using custom Dockerfile generator with Java ${SDK_JAVA_VERSION}"
+            generate_atak_civ_dockerfile "$version" "$dockerfile_path"
+            return 0
+        fi
+    fi
+    
+    log_warn "Using fallback hardcoded Dockerfile generator"
     
     cat > "$dockerfile_path" << EOF
 # Defense Builders SDK - ATAK-CIV v${version}
