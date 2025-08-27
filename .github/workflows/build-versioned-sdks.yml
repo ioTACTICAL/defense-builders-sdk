@@ -352,20 +352,13 @@ cat temp_version_table.md' VERSION_MATRIX.md
         echo "" >> BUILD_STATUS.md
         echo "View all containers: [GitHub Container Registry](https://github.com/orgs/${{ github.repository_owner }}/packages)" >> BUILD_STATUS.md
         
-        # Generate JSON API for ioTACTICAL.co integration
+        # Generate JSON API for ioTACTICAL.co integration (website format)
         cat > sdk-versions.json << EOF
         {
-          "last_updated": "${current_date}",
-          "build_id": "${{ github.run_id }}",
-          "commit_sha": "${{ github.sha }}",
-          "registry_base": "ghcr.io/${{ github.repository_owner }}",
-          "sdks": {
-            "atak-civ": {
-              "name": "ATAK-CIV",
-              "description": "Android Tactical Assault Kit (Civil) Development Environment",
-              "latest_version": "5.5.0.5",
-              "container_base": "dbsdk-atak-civ",
-              "versions": [
+          "atak-civ": {
+            "name": "ATAK CIV SDK",
+            "description": "Android Team Awareness Kit Civilian SDK",
+            "versions": [
         EOF
         
         # Add version entries
@@ -382,13 +375,13 @@ cat temp_version_table.md' VERSION_MATRIX.md
               cat >> sdk-versions.json << VERSION_EOF
                 {
                   "version": "${version}",
-                  "status": "active",
-                  "features": ["Enhanced DSM manager", "Improved documentation", "Latest APIs"],
-                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "size_mb": 2100,
+                  "label": "${version} (Latest)",
+                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
                   "java_version": "11",
-                  "android_apis": ["21", "30", "33"],
-                  "recommended": true
+                  "gradle_version": "7.6",
+                  "android_api": "30",
+                  "is_latest": true,
+                  "release_notes": "Latest stable release with enhanced features and bug fixes"
                 }
 VERSION_EOF
               ;;
@@ -396,13 +389,13 @@ VERSION_EOF
               cat >> sdk-versions.json << VERSION_EOF
                 {
                   "version": "${version}",
-                  "status": "active", 
-                  "features": ["Action bar APIs", "Typst user manual support"],
-                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "size_mb": 2100,
+                  "label": "${version}",
+                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
                   "java_version": "11",
-                  "android_apis": ["21", "30", "33"],
-                  "recommended": false
+                  "gradle_version": "7.6", 
+                  "android_api": "30",
+                  "is_latest": false,
+                  "release_notes": "Stable release with improved performance and compatibility"
                 }
 VERSION_EOF
               ;;
@@ -410,13 +403,13 @@ VERSION_EOF
               cat >> sdk-versions.json << VERSION_EOF
                 {
                   "version": "${version}",
-                  "status": "active",
-                  "features": ["Foundation release", "Core ATAK features"],
-                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "size_mb": 2100,
-                  "java_version": "11", 
-                  "android_apis": ["21", "30", "33"],
-                  "recommended": false
+                  "label": "${version}",
+                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+                  "java_version": "11",
+                  "gradle_version": "7.6",
+                  "android_api": "30", 
+                  "is_latest": false,
+                  "release_notes": "Legacy stable release for compatibility testing"
                 }
 VERSION_EOF
               ;;
@@ -424,13 +417,13 @@ VERSION_EOF
               cat >> sdk-versions.json << VERSION_EOF
                 {
                   "version": "${version}",
-                  "status": "active",
-                  "features": ["ATAK development environment"],
-                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "size_mb": 2100,
+                  "label": "${version}",
+                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
                   "java_version": "11",
-                  "android_apis": ["21", "30", "33"],
-                  "recommended": false
+                  "gradle_version": "7.6",
+                  "android_api": "30",
+                  "is_latest": false,
+                  "release_notes": "ATAK SDK development environment"
                 }
 VERSION_EOF
               ;;
@@ -441,28 +434,22 @@ VERSION_EOF
               ],
               "templates": [
                 {
-                  "name": "basic",
-                  "display_name": "Basic Plugin Template",
-                  "description": "Simple ATAK plugin with essential structure"
+                  "id": "basic",
+                  "name": "Basic Plugin",
+                  "description": "Simple ATAK plugin with basic functionality and core SDK integration"
                 },
                 {
-                  "name": "advanced", 
-                  "display_name": "Advanced Plugin Template",
-                  "description": "Full-featured plugin with UI components and services"
+                  "id": "advanced", 
+                  "name": "Advanced Plugin",
+                  "description": "Complex plugin with UI components, data integration, and advanced ATAK features"
                 },
                 {
-                  "name": "custom",
-                  "display_name": "Custom Setup",
-                  "description": "Blank environment for custom plugin development"
+                  "id": "custom",
+                  "name": "Custom Template",
+                  "description": "Minimal setup for experienced developers who prefer to build from scratch"
                 }
               ]
             }
-          },
-          "codespace_config": {
-            "machine_types": ["standardLinux32gb"],
-            "recommended_machine": "standardLinux32gb",
-            "min_ram_gb": 8,
-            "min_cpu_cores": 4
           }
         }
         EOF
