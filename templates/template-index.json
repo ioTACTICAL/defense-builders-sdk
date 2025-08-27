@@ -1,0 +1,133 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-08-27",
+  "description": "DBSDK Template Index for ioTACTICAL.co Integration",
+  "base_url": "https://raw.githubusercontent.com/iotactical/defense-builders-sdk/main/templates/",
+  
+  "sdks": {
+    "atak-civ": {
+      "name": "ATAK-CIV",
+      "description": "Android Tactical Assault Kit (Civil) Plugin Development",
+      "supported_versions": ["5.3.0.12", "5.4.0.21", "5.5.0.5"],
+      "default_version": "5.5.0.5",
+      "container_base": "ghcr.io/iotactical/dbsdk-atak-civ",
+      
+      "templates": [
+        {
+          "id": "basic",
+          "name": "Basic Plugin Template",
+          "description": "Ready-to-go ATAK plugin with essential structure and build configuration",
+          "difficulty": "beginner",
+          "features": [
+            "Pre-configured plugin template",
+            "Essential VS Code extensions",
+            "Basic build and deployment scripts",
+            "Local.properties setup",
+            "Quick start README"
+          ],
+          "estimated_setup_time": "2-5 minutes",
+          "use_cases": [
+            "First-time ATAK plugin development",
+            "Simple plugin projects",
+            "Learning ATAK APIs",
+            "Rapid prototyping"
+          ],
+          "devcontainer_path": "atak-civ/basic/.devcontainer/devcontainer.json",
+          "post_create_script": "atak-civ/basic/.devcontainer/post-create.sh"
+        },
+        
+        {
+          "id": "advanced",
+          "name": "Advanced Plugin Template", 
+          "description": "Full-featured development environment with testing, CI/CD, and comprehensive tooling",
+          "difficulty": "intermediate",
+          "features": [
+            "Complete testing framework (unit + instrumented)",
+            "GitHub Actions CI/CD pipeline",
+            "Code quality tools (lint, checkstyle)",
+            "Documentation structure",
+            "Pre-commit hooks",
+            "Enhanced VS Code configuration",
+            "Development scripts and automation"
+          ],
+          "estimated_setup_time": "5-10 minutes",
+          "use_cases": [
+            "Production plugin development",
+            "Team collaboration",
+            "Quality-focused development",
+            "Complex plugin projects"
+          ],
+          "devcontainer_path": "atak-civ/advanced/.devcontainer/devcontainer.json",
+          "post_create_script": "atak-civ/advanced/.devcontainer/post-create.sh"
+        },
+        
+        {
+          "id": "custom",
+          "name": "Custom Setup",
+          "description": "Minimal environment for custom plugin development and experimentation",
+          "difficulty": "advanced",
+          "features": [
+            "Minimal VS Code setup",
+            "Basic environment configuration",
+            "Maximum customization flexibility",
+            "Guidance for customization options",
+            "Clean slate for custom tooling"
+          ],
+          "estimated_setup_time": "1-2 minutes + custom setup time",
+          "use_cases": [
+            "Custom development workflows",
+            "Importing existing projects",
+            "Experimental development",
+            "Advanced users with specific requirements"
+          ],
+          "devcontainer_path": "atak-civ/custom/.devcontainer/devcontainer.json",
+          "post_create_script": "atak-civ/custom/.devcontainer/post-create.sh"
+        }
+      ]
+    }
+  },
+  
+  "codespace_requirements": {
+    "minimum_machine": "standardLinux32gb",
+    "recommended_machine": "standardLinux32gb", 
+    "min_ram_gb": 8,
+    "min_cpu_cores": 4,
+    "min_disk_gb": 32,
+    "required_ports": [8080, 5037],
+    "optional_ports": [3000, 8000]
+  },
+  
+  "integration_guide": {
+    "repository_creation": {
+      "description": "Steps for ioTACTICAL.co to create repositories with DBSDK templates",
+      "steps": [
+        "Create GitHub repository with user-specified name",
+        "Select template based on user choice (basic/advanced/custom)",
+        "Generate devcontainer.json with selected SDK version",
+        "Copy template files to repository",
+        "Substitute template variables (PROJECT_NAME, ATAK_SDK_VERSION)",
+        "Create initial commit with template setup",
+        "Launch Codespace with generated configuration"
+      ]
+    },
+    
+    "variable_substitution": {
+      "PROJECT_NAME": "User-provided project name",
+      "ATAK_SDK_VERSION": "Selected SDK version (5.3.0.12, 5.4.0.21, or 5.5.0.5)",
+      "PACKAGE_NAME": "Derived from PROJECT_NAME (lowercase, no spaces)",
+      "DESCRIPTION": "Optional user-provided project description"
+    },
+    
+    "api_endpoints": {
+      "sdk_versions": "https://raw.githubusercontent.com/iotactical/defense-builders-sdk/main/sdk-versions.json",
+      "template_index": "https://raw.githubusercontent.com/iotactical/defense-builders-sdk/main/templates/template-index.json",
+      "devcontainer_template": "https://raw.githubusercontent.com/iotactical/defense-builders-sdk/main/templates/{sdk}/{template}/.devcontainer/devcontainer.json"
+    }
+  },
+  
+  "support": {
+    "documentation": "https://github.com/iotactical/defense-builders-sdk",
+    "issues": "https://github.com/iotactical/defense-builders-sdk/issues",
+    "discussions": "https://github.com/iotactical/defense-builders-sdk/discussions"
+  }
+}

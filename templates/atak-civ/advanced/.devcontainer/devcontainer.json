@@ -1,0 +1,108 @@
+{
+  "name": "ATAK Plugin: ${PROJECT_NAME} (Advanced)",
+  "image": "ghcr.io/iotactical/dbsdk-atak-civ:${ATAK_SDK_VERSION:-5.5.0.5}",
+  "workspaceFolder": "/workspaces",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-android",
+        "formulahendry.auto-rename-tag",
+        "ms-vscode.vscode-json",
+        "ms-vscode.gradle",
+        "redhat.java",
+        "vscode-icons-team.vscode-icons",
+        "ms-vscode.vscode-typescript-next",
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "eamodio.gitlens",
+        "ms-vscode.test-adapter-converter",
+        "redhat.vscode-xml",
+        "ms-vscode.hexeditor",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        "java.home": "/usr/lib/jvm/msopenjdk-current",
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-11",
+            "path": "/usr/lib/jvm/msopenjdk-current"
+          }
+        ],
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.debug.settings.enableRunDebugCodeLens": true,
+        "java.test.editor.enableShortcuts": true,
+        "gradle.nestedProjects": true,
+        "gradle.debug": true,
+        "files.watcherExclude": {
+          "**/build/**": true,
+          "**/.gradle/**": true
+        },
+        "search.exclude": {
+          "**/build": true,
+          "**/.gradle": true,
+          "**/node_modules": true
+        },
+        "java.saveActions.organizeImports": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        }
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "PROJECT_NAME": "${PROJECT_NAME:-MyAdvancedATAKPlugin}",
+    "ATAK_SDK_VERSION": "${ATAK_SDK_VERSION:-5.5.0.5}",
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current",
+    "GRADLE_OPTS": "-Xmx2048m -Dorg.gradle.daemon=false"
+  },
+
+  "forwardPorts": [8080, 5037, 3000, 8000],
+  
+  "portsAttributes": {
+    "8080": {
+      "label": "Development Server",
+      "onAutoForward": "notify"
+    },
+    "5037": {
+      "label": "ADB Server",
+      "onAutoForward": "silent"
+    },
+    "3000": {
+      "label": "Documentation Server",
+      "onAutoForward": "silent"
+    },
+    "8000": {
+      "label": "Debug Server",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  "runArgs": ["--init"],
+  
+  "shutdownAction": "stopCompose",
+  
+  "containerEnv": {
+    "TZ": "UTC"
+  }
+}

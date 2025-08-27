@@ -1,0 +1,44 @@
+{
+  "name": "ATAK Plugin: ${PROJECT_NAME} (Custom)",
+  "image": "ghcr.io/iotactical/dbsdk-atak-civ:${ATAK_SDK_VERSION:-5.5.0.5}",
+  "workspaceFolder": "/workspaces",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-android"
+      ],
+      "settings": {
+        "java.home": "/usr/lib/jvm/msopenjdk-current",
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-11",
+            "path": "/usr/lib/jvm/msopenjdk-current"
+          }
+        ]
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "PROJECT_NAME": "${PROJECT_NAME:-CustomATAKPlugin}",
+    "ATAK_SDK_VERSION": "${ATAK_SDK_VERSION:-5.5.0.5}",
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current"
+  },
+
+  "forwardPorts": [8080, 5037],
+  
+  "portsAttributes": {
+    "8080": {
+      "label": "Development Server"
+    },
+    "5037": {
+      "label": "ADB Server"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}

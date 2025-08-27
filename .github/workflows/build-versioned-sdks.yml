@@ -191,10 +191,17 @@ jobs:
         file: ./sdks/atak-civ/Dockerfile.v${{ matrix.version }}
         platforms: linux/amd64
         push: true
+        provenance: false
         tags: |
           ${{ env.REGISTRY }}/${{ github.repository_owner }}/dbsdk-atak-civ:${{ matrix.version }}
+        labels: |
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.description=DBSDK ATAK-CIV v${{ matrix.version }} Development Environment
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ matrix.version }}
+          org.opencontainers.image.created=${{ github.run_number }}
         build-args: |
-          BUILD_DATE=${{ github.run_id }}
+          BUILD_DATE=${{ github.run_number }}
           GIT_SHA=${{ github.sha }}
           SDK_VERSION=${{ matrix.version }}
         cache-from: type=gha,scope=${{ matrix.version }}
@@ -345,12 +352,128 @@ cat temp_version_table.md' VERSION_MATRIX.md
         echo "" >> BUILD_STATUS.md
         echo "View all containers: [GitHub Container Registry](https://github.com/orgs/${{ github.repository_owner }}/packages)" >> BUILD_STATUS.md
         
+        # Generate JSON API for ioTACTICAL.co integration
+        cat > sdk-versions.json << EOF
+        {
+          "last_updated": "${current_date}",
+          "build_id": "${{ github.run_id }}",
+          "commit_sha": "${{ github.sha }}",
+          "registry_base": "ghcr.io/${{ github.repository_owner }}",
+          "sdks": {
+            "atak-civ": {
+              "name": "ATAK-CIV",
+              "description": "Android Tactical Assault Kit (Civil) Development Environment",
+              "latest_version": "5.5.0.5",
+              "container_base": "dbsdk-atak-civ",
+              "versions": [
+        EOF
+        
+        # Add version entries
+        first=true
+        echo "$versions" | jq -r '.[]' | while read version; do
+          if [ "$first" = true ]; then
+            first=false
+          else
+            echo "," >> sdk-versions.json
+          fi
+          
+          case "$version" in
+            "5.5.0.5")
+              cat >> sdk-versions.json << VERSION_EOF
+                {
+                  "version": "${version}",
+                  "status": "active",
+                  "features": ["Enhanced DSM manager", "Improved documentation", "Latest APIs"],
+                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+                  "size_mb": 2100,
+                  "java_version": "11",
+                  "android_apis": ["21", "30", "33"],
+                  "recommended": true
+                }
+VERSION_EOF
+              ;;
+            "5.4.0.21") 
+              cat >> sdk-versions.json << VERSION_EOF
+                {
+                  "version": "${version}",
+                  "status": "active", 
+                  "features": ["Action bar APIs", "Typst user manual support"],
+                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+                  "size_mb": 2100,
+                  "java_version": "11",
+                  "android_apis": ["21", "30", "33"],
+                  "recommended": false
+                }
+VERSION_EOF
+              ;;
+            "5.3.0.12")
+              cat >> sdk-versions.json << VERSION_EOF
+                {
+                  "version": "${version}",
+                  "status": "active",
+                  "features": ["Foundation release", "Core ATAK features"],
+                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+                  "size_mb": 2100,
+                  "java_version": "11", 
+                  "android_apis": ["21", "30", "33"],
+                  "recommended": false
+                }
+VERSION_EOF
+              ;;
+            *)
+              cat >> sdk-versions.json << VERSION_EOF
+                {
+                  "version": "${version}",
+                  "status": "active",
+                  "features": ["ATAK development environment"],
+                  "container_image": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+                  "size_mb": 2100,
+                  "java_version": "11",
+                  "android_apis": ["21", "30", "33"],
+                  "recommended": false
+                }
+VERSION_EOF
+              ;;
+          esac
+        done
+        
+        cat >> sdk-versions.json << EOF
+              ],
+              "templates": [
+                {
+                  "name": "basic",
+                  "display_name": "Basic Plugin Template",
+                  "description": "Simple ATAK plugin with essential structure"
+                },
+                {
+                  "name": "advanced", 
+                  "display_name": "Advanced Plugin Template",
+                  "description": "Full-featured plugin with UI components and services"
+                },
+                {
+                  "name": "custom",
+                  "display_name": "Custom Setup",
+                  "description": "Blank environment for custom plugin development"
+                }
+              ]
+            }
+          },
+          "codespace_config": {
+            "machine_types": ["standardLinux32gb"],
+            "recommended_machine": "standardLinux32gb",
+            "min_ram_gb": 8,
+            "min_cpu_cores": 4
+          }
+        }
+        EOF
+        
+        echo "Generated sdk-versions.json for ioTACTICAL.co API integration"
         echo "Generated build status documentation"
         rm -f temp_version_table.md
     
     - name: Commit documentation updates
       run: |
-        git add VERSION_MATRIX.md BUILD_STATUS.md
+        git add VERSION_MATRIX.md BUILD_STATUS.md sdk-versions.json
         if git diff --cached --quiet; then
           echo "No documentation changes to commit"
         else
