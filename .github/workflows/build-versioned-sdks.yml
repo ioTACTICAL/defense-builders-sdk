@@ -8,6 +8,7 @@ on:
       - 'sdk-configs/atak-civ.conf'
       - 'base/**'
       - 'scripts/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths: 
@@ -15,6 +16,7 @@ on:
       - 'sdk-configs/atak-civ.conf'
       - 'base/**'
       - 'scripts/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       version:
