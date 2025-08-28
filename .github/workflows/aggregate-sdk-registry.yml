@@ -1,0 +1,326 @@
+name: Aggregate SDK Registry from Gists
+
+on:
+  repository_dispatch:
+    types: [sdk-registry-update]
+  schedule:
+    # Run every 6 hours to catch any missed updates
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all containers'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  discover-gists:
+    runs-on: ubuntu-latest
+    outputs:
+      gists: ${{ steps.discover.outputs.gists }}
+      sdk_versions_json: ${{ steps.aggregate.outputs.sdk_versions_json }}
+      
+    steps:
+      - name: Discover SDK version gists
+        id: discover
+        run: |
+          echo "Discovering SDK version gists from organization..."
+          
+          # Get all public gists from the organization
+          gists_data=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/users/iotactical/gists?per_page=100")
+          
+          # Filter for SDK version gists
+          sdk_gists=$(echo "$gists_data" | jq '[
+            .[] | 
+            select(.files | keys[] | test("^sdk-versions-.*\\.json$")) |
+            {
+              id: .id,
+              filename: (.files | keys[] | select(test("^sdk-versions-.*\\.json$"))),
+              sdk_name: (.files | keys[] | select(test("^sdk-versions-.*\\.json$")) | gsub("^sdk-versions-"; "") | gsub("\\.json$"; "")),
+              updated_at: .updated_at,
+              url: .html_url
+            }
+          ]')
+          
+          echo "Found SDK gists:"
+          echo "$sdk_gists" | jq -r '.[] | "- \(.sdk_name): \(.filename) (\(.id))"'
+          
+          if [[ $(echo "$sdk_gists" | jq '. | length') -eq 0 ]]; then
+            echo "::warning::No SDK version gists found"
+            echo 'gists=[]' >> $GITHUB_OUTPUT
+          else
+            echo "gists=$(echo "$sdk_gists" | jq -c .)" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Aggregate SDK versions from gists
+        id: aggregate
+        run: |
+          gists='${{ steps.discover.outputs.gists }}'
+          
+          if [[ "$gists" == "[]" ]]; then
+            echo "No gists to aggregate"
+            echo 'sdk_versions_json={}' >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Aggregating SDK versions from gists..."
+          aggregated_json="{}"
+          
+          # Fetch and merge each gist
+          echo "$gists" | jq -c '.[]' | while read -r gist; do
+            gist_id=$(echo "$gist" | jq -r '.id')
+            filename=$(echo "$gist" | jq -r '.filename')
+            sdk_name=$(echo "$gist" | jq -r '.sdk_name')
+            
+            echo "Fetching gist $gist_id for SDK $sdk_name..."
+            
+            # Get gist content
+            gist_content=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/gists/$gist_id")
+            
+            # Extract the JSON content
+            sdk_json=$(echo "$gist_content" | jq -r ".files[\"$filename\"].content")
+            
+            if [[ "$sdk_json" != "null" && -n "$sdk_json" ]]; then
+              # Validate JSON
+              if echo "$sdk_json" | jq empty 2>/dev/null; then
+                # Save individual SDK JSON
+                echo "$sdk_json" > "${sdk_name}-versions.json"
+                echo "✅ Fetched valid JSON for $sdk_name"
+              else
+                echo "::warning::Invalid JSON for $sdk_name, skipping"
+              fi
+            else
+              echo "::warning::No content found for $sdk_name, skipping"
+            fi
+          done
+          
+          # Merge all individual SDK JSONs
+          merged_json="{}"
+          for sdk_file in *-versions.json; do
+            if [[ -f "$sdk_file" ]]; then
+              echo "Merging $sdk_file..."
+              merged_json=$(echo "$merged_json" | jq --slurpfile sdk_data "$sdk_file" '. + $sdk_data[0]')
+            fi
+          done
+          
+          # Validate final merged JSON
+          if echo "$merged_json" | jq empty 2>/dev/null; then
+            echo "sdk_versions_json<<EOF" >> $GITHUB_OUTPUT
+            echo "$merged_json" >> $GITHUB_OUTPUT  
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            # Save to file for other jobs
+            echo "$merged_json" > sdk-versions.json
+            
+            echo "✅ Successfully aggregated $(echo "$merged_json" | jq 'keys | length') SDK collections"
+            echo "SDK collections: $(echo "$merged_json" | jq -r 'keys | join(", ")')"
+          else
+            echo "::error::Failed to create valid aggregated JSON"
+            exit 1
+          fi
+          
+      - name: Upload aggregated registry
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-versions-registry
+          path: |
+            sdk-versions.json
+            *-versions.json
+          retention-days: 30
+
+  validate-registry:
+    needs: discover-gists
+    runs-on: ubuntu-latest
+    if: needs.discover-gists.outputs.sdk_versions_json != '{}'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install validation tools
+        run: npm install -g ajv-cli
+        
+      - name: Download aggregated registry
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-versions-registry
+          
+      - name: Validate aggregated registry
+        run: |
+          echo "Validating aggregated SDK registry..."
+          
+          # Validate against schema
+          ajv validate -s schema/sdk-versions-schema.json -d sdk-versions.json
+          
+          # Additional validation checks
+          python3 -c "
+          import json
+          
+          with open('sdk-versions.json') as f:
+              data = json.load(f)
+              
+          print(f'Registry contains {len(data)} SDK collections:')
+          
+          for sdk_name, sdk_data in data.items():
+              # Validate required fields
+              required_fields = ['name', 'description', 'versions', 'templates']
+              for field in required_fields:
+                  assert field in sdk_data, f'Missing {field} in {sdk_name}'
+                  
+              # Validate versions
+              versions = sdk_data['versions']
+              assert len(versions) > 0, f'No versions found for {sdk_name}'
+              
+              # Check for latest version
+              latest_versions = [v for v in versions if v.get('is_latest', False)]
+              assert len(latest_versions) == 1, f'{sdk_name} must have exactly one latest version'
+              
+              print(f'  ✅ {sdk_name}: {len(versions)} versions, latest: {latest_versions[0][\"version\"]}')
+          
+          print('✅ All validation checks passed')
+          "
+
+  update-registry:
+    needs: [discover-gists, validate-registry]
+    runs-on: ubuntu-latest
+    if: needs.discover-gists.outputs.sdk_versions_json != '{}'
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Download aggregated registry
+        uses: actions/download-artifact@v4
+        with:
+          name: sdk-versions-registry
+          
+      - name: Update repository registry
+        run: |
+          # Check if there are changes
+          if cmp -s sdk-versions.json ./sdk-versions.json 2>/dev/null; then
+            echo "No changes to SDK registry"
+            exit 0
+          fi
+          
+          # Update the registry file
+          cp sdk-versions.json ./sdk-versions.json
+          
+          # Generate updated documentation
+          python3 << 'EOF'
+          import json
+          from datetime import datetime
+          
+          # Load registry
+          with open('sdk-versions.json') as f:
+              registry = json.load(f)
+          
+          # Generate BUILD_STATUS.md
+          with open('BUILD_STATUS.md', 'w') as f:
+              f.write("# Defense Builders SDK Registry Status\n\n")
+              f.write(f"**Last Updated**: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
+              f.write(f"**Build**: ${{ github.run_number }}\n")
+              f.write(f"**Commit**: ${{ github.sha }}\n\n")
+              
+              f.write("## SDK Collections\n\n")
+              for sdk_name, sdk_data in registry.items():
+                  versions = sdk_data['versions']
+                  latest = next(v for v in versions if v.get('is_latest', False))
+                  f.write(f"### {sdk_data['name']}\n")
+                  f.write(f"- **Description**: {sdk_data['description']}\n")
+                  f.write(f"- **Latest Version**: {latest['version']}\n")
+                  f.write(f"- **Container**: `{latest['container']}`\n")
+                  f.write(f"- **Total Versions**: {len(versions)}\n")
+                  f.write(f"- **Templates**: {len(sdk_data['templates'])}\n\n")
+          
+          print("Generated BUILD_STATUS.md")
+          EOF
+          
+      - name: Commit updated registry
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Defense Builders Registry Bot"
+          
+          git add sdk-versions.json BUILD_STATUS.md
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            # Get list of updated SDKs
+            updated_sdks=$(echo '${{ needs.discover-gists.outputs.sdk_versions_json }}' | jq -r 'keys | join(", ")')
+            
+            git commit -m "Update SDK registry from gists
+
+Updated SDK collections: $updated_sdks
+
+Auto-aggregated from organization gists:
+${{ github.event.client_payload.gist_name && format('- Triggered by: {0}', github.event.client_payload.gist_name) || '- Scheduled update' }}
+
+🤖 Generated by Defense Builders Registry Bot"
+            
+            git push
+            echo "✅ Registry updated and committed"
+          fi
+
+  report-status:
+    needs: [discover-gists, validate-registry, update-registry]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Report aggregation results
+        run: |
+          gists='${{ needs.discover-gists.outputs.gists }}'
+          
+          echo "## SDK Registry Aggregation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$gists" == "[]" ]]; then
+            echo "**Status**: ⚠️ No SDK gists found" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No SDK version gists were discovered in the organization." >> $GITHUB_STEP_SUMMARY
+            echo "SDK collections should create gists named 'sdk-versions-{name}.json'" >> $GITHUB_STEP_SUMMARY
+          else
+            gist_count=$(echo "$gists" | jq '. | length')
+            echo "**Status**: ✅ Successfully aggregated $gist_count SDK collections" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "**Processed Gists**:" >> $GITHUB_STEP_SUMMARY
+            echo "$gists" | jq -r '.[] | "- **\(.sdk_name)**: [\(.filename)](\(.url))"' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [[ "${{ needs.validate-registry.result }}" == "success" ]]; then
+              echo "**Validation**: ✅ All checks passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Validation**: ❌ Validation failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [[ "${{ needs.update-registry.result }}" == "success" ]]; then
+              echo "**Registry Update**: ✅ Repository updated" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Registry Update**: ❌ Update failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps**: Updated registry is available for iotactical.co subscribers" >> $GITHUB_STEP_SUMMARY

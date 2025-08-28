@@ -26,6 +26,17 @@ Thumbs.db
 .env
 .env.local
 
+# GitHub App private keys and secrets
+*.pem
+*.private-key
+.github-app-key
+github-app-*.pem
+defense-builders-*.pem
+*private-key*
+secrets/
+keys/
+.gist_secret.txt
+
 # Test files
 test-results/
 coverage/

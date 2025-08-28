@@ -46,6 +46,22 @@
                 "type": "string",
                 "description": "Target Android API level"
               },
+              "dotnet_version": {
+                "type": "string",
+                "description": "Required .NET version"
+              },
+              "windows_version": {
+                "type": "string",
+                "description": "Target Windows version"
+              },
+              "node_version": {
+                "type": "string",
+                "description": "Required Node.js version"
+              },
+              "python_version": {
+                "type": "string",
+                "description": "Required Python version"
+              },
               "is_latest": {
                 "type": "boolean",
                 "description": "Whether this is the latest version"
@@ -55,8 +71,8 @@
                 "description": "Release notes for this version"
               }
             },
-            "required": ["version", "label", "container", "java_version", "gradle_version", "android_api", "is_latest"],
-            "additionalProperties": false
+            "required": ["version", "label", "container", "is_latest"],
+            "additionalProperties": true
           }
         },
         "templates": {
