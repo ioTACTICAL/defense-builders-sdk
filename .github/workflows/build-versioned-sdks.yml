@@ -352,107 +352,58 @@ cat temp_version_table.md' VERSION_MATRIX.md
         echo "" >> BUILD_STATUS.md
         echo "View all containers: [GitHub Container Registry](https://github.com/orgs/${{ github.repository_owner }}/packages)" >> BUILD_STATUS.md
         
-        # Generate JSON API for ioTACTICAL.co integration (website format)
-        cat > sdk-versions.json << EOF
-        {
-          "atak-civ": {
-            "name": "ATAK CIV SDK",
-            "description": "Android Team Awareness Kit Civilian SDK",
-            "versions": [
-        EOF
+        # Generate JSON API using jq for reliable JSON formatting
+        echo "Generating sdk-versions.json API file..."
         
-        # Add version entries
-        first=true
-        echo "$versions" | jq -r '.[]' | while read version; do
-          if [ "$first" = true ]; then
-            first=false
-          else
-            echo "," >> sdk-versions.json
-          fi
-          
-          case "$version" in
-            "5.5.0.5")
-              cat >> sdk-versions.json << VERSION_EOF
-                {
-                  "version": "${version}",
-                  "label": "${version} (Latest)",
-                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
+        # Create base structure
+        jq -n \
+          --argjson versions "$versions" \
+          --arg registry "${{ github.repository_owner }}" \
+          '{
+            "atak-civ": {
+              "name": "ATAK CIV SDK",
+              "description": "Android Team Awareness Kit Civilian SDK",
+              "versions": [
+                ($versions[] | {
+                  "version": .,
+                  "label": (if . == "5.5.0.5" then "\(.) (Latest)" else . end),
+                  "container": "ghcr.io/\($registry)/dbsdk-atak-civ:\(.)",
                   "java_version": "11",
                   "gradle_version": "7.6",
                   "android_api": "30",
-                  "is_latest": true,
-                  "release_notes": "Latest stable release with enhanced features and bug fixes"
-                }
-VERSION_EOF
-              ;;
-            "5.4.0.21") 
-              cat >> sdk-versions.json << VERSION_EOF
-                {
-                  "version": "${version}",
-                  "label": "${version}",
-                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "java_version": "11",
-                  "gradle_version": "7.6", 
-                  "android_api": "30",
-                  "is_latest": false,
-                  "release_notes": "Stable release with improved performance and compatibility"
-                }
-VERSION_EOF
-              ;;
-            "5.3.0.12")
-              cat >> sdk-versions.json << VERSION_EOF
-                {
-                  "version": "${version}",
-                  "label": "${version}",
-                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "java_version": "11",
-                  "gradle_version": "7.6",
-                  "android_api": "30", 
-                  "is_latest": false,
-                  "release_notes": "Legacy stable release for compatibility testing"
-                }
-VERSION_EOF
-              ;;
-            *)
-              cat >> sdk-versions.json << VERSION_EOF
-                {
-                  "version": "${version}",
-                  "label": "${version}",
-                  "container": "ghcr.io/${{ github.repository_owner }}/dbsdk-atak-civ:${version}",
-                  "java_version": "11",
-                  "gradle_version": "7.6",
-                  "android_api": "30",
-                  "is_latest": false,
-                  "release_notes": "ATAK SDK development environment"
-                }
-VERSION_EOF
-              ;;
-          esac
-        done
-        
-        cat >> sdk-versions.json << EOF
+                  "is_latest": (. == "5.5.0.5"),
+                  "release_notes": (
+                    if . == "5.5.0.5" then 
+                      "Latest stable release with enhanced features and bug fixes"
+                    elif . == "5.4.0.21" then 
+                      "Stable release with improved performance and compatibility"
+                    elif . == "5.3.0.12" then 
+                      "Legacy stable release for compatibility testing"
+                    else 
+                      "ATAK SDK development environment"
+                    end
+                  )
+                })
               ],
               "templates": [
                 {
                   "id": "basic",
-                  "name": "Basic Plugin",
+                  "name": "Basic Plugin", 
                   "description": "Simple ATAK plugin with basic functionality and core SDK integration"
                 },
                 {
-                  "id": "advanced", 
+                  "id": "advanced",
                   "name": "Advanced Plugin",
                   "description": "Complex plugin with UI components, data integration, and advanced ATAK features"
                 },
                 {
-                  "id": "custom",
+                  "id": "custom", 
                   "name": "Custom Template",
                   "description": "Minimal setup for experienced developers who prefer to build from scratch"
                 }
               ]
             }
-          }
-        }
-        EOF
+          }' > sdk-versions.json
         
         echo "Generated sdk-versions.json for ioTACTICAL.co API integration"
         echo "Generated build status documentation"
