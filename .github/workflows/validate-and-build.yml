@@ -1,0 +1,69 @@
+name: Validate and Build SDK Registry
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install validation tools
+        run: |
+          npm install -g ajv-cli
+          
+      - name: Validate SDK versions schema
+        run: |
+          ajv validate -s schema/sdk-versions-schema.json -d sdk-versions.json
+          
+      - name: Validate JSON syntax
+        run: |
+          python3 -m json.tool sdk-versions.json > /dev/null
+          echo "✅ JSON syntax is valid"
+          
+      - name: Check for required fields
+        run: |
+          python3 -c "
+          import json
+          with open('sdk-versions.json') as f:
+              data = json.load(f)
+          for sdk_name, sdk_data in data.items():
+              assert 'name' in sdk_data, f'Missing name in {sdk_name}'
+              assert 'description' in sdk_data, f'Missing description in {sdk_name}'
+              assert 'versions' in sdk_data, f'Missing versions in {sdk_name}'
+              assert 'templates' in sdk_data, f'Missing templates in {sdk_name}'
+              print(f'✅ {sdk_name} has all required fields')
+          "
+          
+      - name: Test Python script
+        run: |
+          python3 scripts/update-sdk-versions.py --help
+          echo "✅ Update script is functional"
+          
+      - name: Summary
+        run: |
+          echo "🎉 All validation checks passed!"
+          echo "📊 SDK Registry Status:"
+          python3 -c "
+          import json
+          with open('sdk-versions.json') as f:
+              data = json.load(f)
+          print(f'  📦 Total SDKs: {len(data)}')
+          for sdk_name, sdk_data in data.items():
+              version_count = len(sdk_data.get('versions', []))
+              template_count = len(sdk_data.get('templates', []))
+              latest = next((v['version'] for v in sdk_data.get('versions', []) if v.get('is_latest')), 'None')
+              print(f'  🔧 {sdk_name}: {version_count} versions, {template_count} templates, latest: {latest}')
+          "

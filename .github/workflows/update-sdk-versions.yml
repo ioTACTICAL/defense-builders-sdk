@@ -1,0 +1,118 @@
+name: Update SDK Versions
+
+on:
+  repository_dispatch:
+    types: [sdk-update]
+  workflow_dispatch:
+    inputs:
+      sdk_name:
+        description: 'SDK name to update'
+        required: true
+        default: 'atak-civ'
+      version:
+        description: 'New version to add'
+        required: true
+      container_image:
+        description: 'Container image URI'
+        required: true
+      java_version:
+        description: 'Java version'
+        required: true
+        default: '11'
+      gradle_version:
+        description: 'Gradle version'
+        required: true
+        default: '7.6'
+      android_api:
+        description: 'Android API level'
+        required: true
+        default: '30'
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: 'Automated release'
+      is_latest:
+        description: 'Mark as latest version'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  update-sdk-versions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: |
+          npm install -g ajv-cli
+          
+      - name: Extract payload data
+        id: payload
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "sdk_name=${{ github.event.client_payload.sdk_name }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+            echo "container_image=${{ github.event.client_payload.container_image }}" >> $GITHUB_OUTPUT
+            echo "java_version=${{ github.event.client_payload.java_version }}" >> $GITHUB_OUTPUT
+            echo "gradle_version=${{ github.event.client_payload.gradle_version }}" >> $GITHUB_OUTPUT
+            echo "android_api=${{ github.event.client_payload.android_api }}" >> $GITHUB_OUTPUT
+            echo "release_notes=${{ github.event.client_payload.release_notes }}" >> $GITHUB_OUTPUT
+            echo "is_latest=${{ github.event.client_payload.is_latest }}" >> $GITHUB_OUTPUT
+          else
+            echo "sdk_name=${{ inputs.sdk_name }}" >> $GITHUB_OUTPUT
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "container_image=${{ inputs.container_image }}" >> $GITHUB_OUTPUT
+            echo "java_version=${{ inputs.java_version }}" >> $GITHUB_OUTPUT
+            echo "gradle_version=${{ inputs.gradle_version }}" >> $GITHUB_OUTPUT
+            echo "android_api=${{ inputs.android_api }}" >> $GITHUB_OUTPUT
+            echo "release_notes=${{ inputs.release_notes }}" >> $GITHUB_OUTPUT
+            echo "is_latest=${{ inputs.is_latest }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Update SDK versions
+        run: |
+          python3 scripts/update-sdk-versions.py \
+            --sdk-name "${{ steps.payload.outputs.sdk_name }}" \
+            --version "${{ steps.payload.outputs.version }}" \
+            --container-image "${{ steps.payload.outputs.container_image }}" \
+            --java-version "${{ steps.payload.outputs.java_version }}" \
+            --gradle-version "${{ steps.payload.outputs.gradle_version }}" \
+            --android-api "${{ steps.payload.outputs.android_api }}" \
+            --release-notes "${{ steps.payload.outputs.release_notes }}" \
+            --is-latest "${{ steps.payload.outputs.is_latest }}"
+            
+      - name: Validate schema
+        run: |
+          ajv validate -s schema/sdk-versions-schema.json -d sdk-versions.json
+          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update ${{ steps.payload.outputs.sdk_name }} SDK to version ${{ steps.payload.outputs.version }}"
+          title: "Update ${{ steps.payload.outputs.sdk_name }} SDK to version ${{ steps.payload.outputs.version }}"
+          body: |
+            Automated SDK version update
+            
+            - SDK: ${{ steps.payload.outputs.sdk_name }}
+            - Version: ${{ steps.payload.outputs.version }}
+            - Container: ${{ steps.payload.outputs.container_image }}
+            - Java: ${{ steps.payload.outputs.java_version }}
+            - Gradle: ${{ steps.payload.outputs.gradle_version }}
+            - Android API: ${{ steps.payload.outputs.android_api }}
+            - Is Latest: ${{ steps.payload.outputs.is_latest }}
+            
+            Release Notes: ${{ steps.payload.outputs.release_notes }}
+          branch: update-sdk-${{ steps.payload.outputs.sdk_name }}-${{ steps.payload.outputs.version }}
+          delete-branch: true

@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Defense Builders SDK Versions Schema",
+  "description": "Schema for defining SDK versions and Codespace templates",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9-]*$": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the SDK"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the SDK"
+        },
+        "versions": {
+          "type": "array",
+          "description": "Available SDK versions",
+          "items": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+\\.\\d+(?:\\.\\d+)?$",
+                "description": "Semantic version number"
+              },
+              "label": {
+                "type": "string",
+                "description": "Display label for the version"
+              },
+              "container": {
+                "type": "string",
+                "format": "uri",
+                "description": "Container image URI"
+              },
+              "java_version": {
+                "type": "string",
+                "description": "Required Java version"
+              },
+              "gradle_version": {
+                "type": "string",
+                "description": "Required Gradle version"
+              },
+              "android_api": {
+                "type": "string",
+                "description": "Target Android API level"
+              },
+              "is_latest": {
+                "type": "boolean",
+                "description": "Whether this is the latest version"
+              },
+              "release_notes": {
+                "type": "string",
+                "description": "Release notes for this version"
+              }
+            },
+            "required": ["version", "label", "container", "java_version", "gradle_version", "android_api", "is_latest"],
+            "additionalProperties": false
+          }
+        },
+        "templates": {
+          "type": "array",
+          "description": "Available Codespace templates",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "description": "Unique template identifier"
+              },
+              "name": {
+                "type": "string",
+                "description": "Display name of the template"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the template"
+              },
+              "devcontainer": {
+                "type": "object",
+                "description": "Devcontainer configuration",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string"
+                  },
+                  "features": {
+                    "type": "object"
+                  },
+                  "customizations": {
+                    "type": "object"
+                  },
+                  "postCreateCommand": {
+                    "type": "string"
+                  }
+                },
+                "required": ["name", "image"]
+              },
+              "files": {
+                "type": "array",
+                "description": "Template files to be generated",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "Relative path to the file"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "File content"
+                    },
+                    "executable": {
+                      "type": "boolean",
+                      "description": "Whether the file should be executable",
+                      "default": false
+                    }
+                  },
+                  "required": ["path", "content"]
+                }
+              }
+            },
+            "required": ["id", "name", "description"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["name", "description", "versions", "templates"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
