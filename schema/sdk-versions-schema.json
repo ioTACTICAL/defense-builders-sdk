@@ -32,7 +32,6 @@
               },
               "container": {
                 "type": "string",
-                "format": "uri",
                 "description": "Container image URI"
               },
               "java_version": {

@@ -29,12 +29,20 @@ framework_log_success() { echo "SUCCESS: $1" >&2; }
 gh_output() {
     local name="$1"
     local value="$2"
-    echo "${name}=${value}" >> $GITHUB_OUTPUT
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+        echo "${name}=${value}" >> "$GITHUB_OUTPUT"
+    else
+        echo "OUTPUT: ${name}=${value}" >&2
+    fi
 }
 
 gh_summary() {
     local content="$1"
-    echo "$content" >> $GITHUB_STEP_SUMMARY
+    if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+        echo "$content" >> "$GITHUB_STEP_SUMMARY"
+    else
+        echo "SUMMARY: $content" >&2
+    fi
 }
 
 gh_notice() {
